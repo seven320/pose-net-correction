@@ -1,2 +1,7 @@
-# pose-net-correction
-make posture correction by pose net
+# package管理
+package.json
+
+yarnで入る
+
+
+
