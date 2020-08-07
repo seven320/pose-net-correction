@@ -435,6 +435,16 @@ function detectPoseInRealTime(video, net) {
     // For each pose (i.e. person) detected in an image, loop through the poses
     // and draw the resulting skeleton and keypoints if over certain confidence
     // scores
+
+    let leftEyes = poses[0]['keypoints'][1]["position"];
+    let rightEyes = poses[0]['keypoints'][2]["position"];
+
+    
+    console.log(((leftEyes['x'] - rightEyes['x']) ** 2
+    + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5);
+
+
+    // console.log(poses[0]['keypoints'][2])
     
     poses.forEach(({score, keypoints}) => {
       if (score >= minPoseConfidence) {

@@ -17,8 +17,10 @@
 import * as posenet from '@tensorflow-models/posenet';
 import dat from 'dat.gui';
 import Stats from 'stats.js';
+import Chart from 'chart.js'
 
 import {drawBoundingBox, drawKeypoints, drawSkeleton, isMobile, toggleLoadingUI, tryResNetButtonName, tryResNetButtonText, updateTryResNetButtonDatGuiCss} from './demo_util';
+import { data } from '@tensorflow/tfjs';
 
 const videoWidth = 600;
 const videoHeight = 500;
@@ -118,15 +120,15 @@ function setupGui(cameras, net) {
 
   // The input parameters have the most effect on accuracy and speed of the
   // network
-  let input = gui.addFolder('Input');
+  // let input = gui.addFolder('Input');
   // Architecture: there are a few PoseNet models varying in size and
   // accuracy. 1.01 is the largest, but will be the slowest. 0.50 is the
   // fastest, but least accurate.
-  architectureController =
-      input.add(guiState.input, 'architecture', ['MobileNetV1']);
+  // architectureController =
+  //     input.add(guiState.input, 'architecture', ['MobileNetV1']);
       // 現状の値を入れる
-  guiState.architecture = guiState.input.architecture; 
-  input.open();
+  // guiState.architecture = guiState.input.architecture; 
+  // input.open();
   // Pose confidence: the overall confidence in the estimation of a person's
   // pose (i.e. a person detected in a frame)
   // Min part confidence: the confidence that a particular estimated keypoint
@@ -139,8 +141,6 @@ function setupGui(cameras, net) {
   let pose = gui.addFolder('pose');
   pose.add(guiState.pose, 'poseValue', 0.0, 1.0);
   pose.open();
-
-
 }
 
 /**
@@ -151,6 +151,8 @@ function setupFPS() {
   document.getElementById('main').appendChild(stats.dom);
 }
 
+
+
 /**
  * Feeds an image to posenet to estimate poses - this is where the magic
  * happens. This function loops with a requestAnimationFrame method.
@@ -158,6 +160,9 @@ function setupFPS() {
 function detectPoseInRealTime(video, net) {
   const canvas = document.getElementById('output');
   const ctx = canvas.getContext('2d');
+
+  let lengthEyeses = [1,2,3];
+  let chartCtx = document.getElementById('chart');
 
   // since images are being fed from a webcam, we want to feed in the
   // original image and then just flip the keypoints' x coordinates. If instead
@@ -167,6 +172,66 @@ function detectPoseInRealTime(video, net) {
 
   canvas.width = videoWidth;
   canvas.height = videoHeight;
+
+  async function drawChart() {
+    console.log(lengthEyeses.length);
+    if (true) {
+
+    }else{
+
+    }
+    if (!myChart) {
+      var myChart = new Chart(chartCtx, {
+        type: "line",
+        data: {
+          labels: [...Array(lengthEyeses.length).keys()],
+          datasets: [{
+            label: '目の距離(px)',
+            data: lengthEyeses,
+            label: "withA",
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.2)'
+            ],
+            borderColor: [
+              'rgba(255,99,132,1)'
+            ]
+          }]
+        },
+        // グラフ自体の共通項目設置絵
+        options: {
+          // レスポンシブ形式を無効にする
+          responsive: false,
+          maintainAspectRatio: false,
+          scales: {
+            xAxes: [{
+              ticks: {
+                suggestedMin: 0,
+                suggestedMax: 120,
+                stepSize: 2
+              }
+            }],
+            yAxes: [{
+              ticks: {
+                suggestedMin: 0,
+                suggestedMax: 200,
+                stepSize: 2
+              }
+            }],
+          },
+          animation: {
+            duration: 0
+          }
+        }
+      })
+    }else{
+      myChart.data.datasets.data = lengthEyeses
+      myChart.data.labels = [...Array(lengthEyeses.length).keys()]
+      myChart.update();
+    }
+    if (lengthEyeses.length > 120){
+      lengthEyeses = lengthEyeses.slice(30)
+    }
+  };
 
   async function poseDetectionFrame() {
     // Begin monitoring code for frames per second
@@ -211,10 +276,17 @@ function detectPoseInRealTime(video, net) {
       ctx.restore();
     }
 
+    // ここで目と目の距離を計算．
+    let leftEyes = poses[0]['keypoints'][1]["position"];
+    let rightEyes = poses[0]['keypoints'][2]["position"];
+
+    
+    let lengthEyes = ((leftEyes['x'] - rightEyes['x']) ** 2 + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5;
+    lengthEyeses.push(lengthEyes)
+
     // For each pose (i.e. person) detected in an image, loop through the poses
     // and draw the resulting skeleton and keypoints if over certain confidence
     // scores
-    
     poses.forEach(({score, keypoints}) => {
       if (score >= minPoseConfidence) {
         drawKeypoints(keypoints, minPartConfidence, ctx);
@@ -223,6 +295,9 @@ function detectPoseInRealTime(video, net) {
       }
     });
 
+    if (lengthEyeses.length % 30 == 1) {
+      drawChart();
+    };
     // End monitoring code for frames per second
     stats.end();
 
