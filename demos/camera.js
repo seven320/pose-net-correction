@@ -63,18 +63,18 @@ async function loadVideo() {
   return video;
 }
 
-const defaultQuantBytes = 2;
+const defaultQuantBytes = 4;
 
 const defaultMobileNetMultiplier = isMobile() ? 0.50 : 0.75;
 const defaultMobileNetStride = 16;
-const defaultMobileNetInputResolution = 500;
+const defaultMobileNetInputResolution = 250;
 
-const defaultResNetMultiplier = 1.0;
-const defaultResNetStride = 32;
-const defaultResNetInputResolution = 250;
+// const defaultResNetMultiplier = 1.0;
+// const defaultResNetStride = 32;
+// const defaultResNetInputResolution = 250;
 
 const guiState = {
-  algorithm: 'multi-pose',
+  algorithm: 'single-pose',
   input: {
     architecture: 'MobileNetV1',
     outputStride: defaultMobileNetStride,
@@ -86,17 +86,20 @@ const guiState = {
     minPoseConfidence: 0.1,
     minPartConfidence: 0.5,
   },
-  multiPoseDetection: {
-    maxPoseDetections: 5,
-    minPoseConfidence: 0.15,
-    minPartConfidence: 0.1,
-    nmsRadius: 30.0,
-  },
+  // multiPoseDetection: {
+  //   maxPoseDetections: 5,
+  //   minPoseConfidence: 0.15,
+  //   minPartConfidence: 0.1,
+  //   nmsRadius: 30.0,
+  // },
   output: {
     showVideo: true,
     showSkeleton: true,
     showPoints: true,
-    showBoundingBox: false,
+    showBoundingBox: true,
+  },
+  pose: {
+    poseValue: 1.0,
   },
   net: null,
 };
@@ -115,10 +118,12 @@ function setupGui(cameras, net) {
 
   let architectureController = null;
   guiState[tryResNetButtonName] = function() {
-    architectureController.setValue('ResNet50')
+    architectureController.setValue('MobileNetV1')
   };
-  gui.add(guiState, tryResNetButtonName).name(tryResNetButtonText);
-  updateTryResNetButtonDatGuiCss();
+
+  // gui.add(guiState, tryResNetButtonName).name(tryResNetButtonText);
+  // updateTryResNetButtonDatGuiCss();
+
 
   // The single-pose algorithm is faster and simpler but requires only one
   // person to be in the frame or results will be innaccurate. Multi-pose works
@@ -134,7 +139,8 @@ function setupGui(cameras, net) {
   // fastest, but least accurate.
   architectureController =
       input.add(guiState.input, 'architecture', ['MobileNetV1', 'ResNet50']);
-  guiState.architecture = guiState.input.architecture;
+      // 現状の値を入れる
+  guiState.architecture = guiState.input.architecture; 
   // Input resolution:  Internally, this parameter affects the height and width
   // of the layers in the neural network. The higher the value of the input
   // resolution the better the accuracy but slower the speed.
@@ -235,17 +241,17 @@ function setupGui(cameras, net) {
   single.add(guiState.singlePoseDetection, 'minPoseConfidence', 0.0, 1.0);
   single.add(guiState.singlePoseDetection, 'minPartConfidence', 0.0, 1.0);
 
-  let multi = gui.addFolder('Multi Pose Detection');
-  multi.add(guiState.multiPoseDetection, 'maxPoseDetections')
-      .min(1)
-      .max(20)
-      .step(1);
-  multi.add(guiState.multiPoseDetection, 'minPoseConfidence', 0.0, 1.0);
-  multi.add(guiState.multiPoseDetection, 'minPartConfidence', 0.0, 1.0);
+  // let multi = gui.addFolder('Multi Pose Detection');
+  // multi.add(guiState.multiPoseDetection, 'maxPoseDetections')
+  //     .min(1)
+  //     .max(20)
+  //     .step(1);
+  // multi.add(guiState.multiPoseDetection, 'minPoseConfidence', 0.0, 1.0);
+  // multi.add(guiState.multiPoseDetection, 'minPartConfidence', 0.0, 1.0);
   // nms Radius: controls the minimum distance between poses that are returned
   // defaults to 20, which is probably fine for most use cases
-  multi.add(guiState.multiPoseDetection, 'nmsRadius').min(0.0).max(40.0);
-  multi.open();
+  // multi.add(guiState.multiPoseDetection, 'nmsRadius').min(0.0).max(40.0);
+  // multi.open();
 
   let output = gui.addFolder('Output');
   output.add(guiState.output, 'showVideo');
@@ -254,6 +260,9 @@ function setupGui(cameras, net) {
   output.add(guiState.output, 'showBoundingBox');
   output.open();
 
+  let pose = gui.addFolder('pose');
+  pose.add(guiState.pose, 'poseValue', 0.0, 1.0);
+  pose.open();
 
   architectureController.onChange(function(architecture) {
     // if architecture is ResNet50, then show ResNet50 options
@@ -303,6 +312,7 @@ function detectPoseInRealTime(video, net) {
   async function poseDetectionFrame() {
     if (guiState.changeToArchitecture) {
       // Important to purge variables and free up GPU memory
+      // net　を定義．
       guiState.net.dispose();
       toggleLoadingUI(true);
       guiState.net = await posenet.load({
@@ -316,6 +326,7 @@ function detectPoseInRealTime(video, net) {
       guiState.changeToArchitecture = null;
     }
 
+    // guiState の状態が変わった時
     if (guiState.changeToMultiplier) {
       guiState.net.dispose();
       toggleLoadingUI(true);
@@ -403,6 +414,7 @@ function detectPoseInRealTime(video, net) {
           scoreThreshold: guiState.multiPoseDetection.minPartConfidence,
           nmsRadius: guiState.multiPoseDetection.nmsRadius
         });
+        
 
         poses = poses.concat(all_poses);
         minPoseConfidence = +guiState.multiPoseDetection.minPoseConfidence;
@@ -423,6 +435,17 @@ function detectPoseInRealTime(video, net) {
     // For each pose (i.e. person) detected in an image, loop through the poses
     // and draw the resulting skeleton and keypoints if over certain confidence
     // scores
+
+    let leftEyes = poses[0]['keypoints'][1]["position"];
+    let rightEyes = poses[0]['keypoints'][2]["position"];
+
+    
+    console.log(((leftEyes['x'] - rightEyes['x']) ** 2
+    + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5);
+
+
+    // console.log(poses[0]['keypoints'][2])
+    
     poses.forEach(({score, keypoints}) => {
       if (score >= minPoseConfidence) {
         if (guiState.output.showPoints) {
@@ -473,7 +496,7 @@ export async function bindPage() {
     throw e;
   }
 
-  setupGui([], net);
+  setupGui([], net); // gui に必要な部分を全て統括
   setupFPS();
   detectPoseInRealTime(video, net);
 }
