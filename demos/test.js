@@ -160,8 +160,10 @@ function setupFPS() {
 function detectPoseInRealTime(video, net) {
   const canvas = document.getElementById('output');
   const ctx = canvas.getContext('2d');
+  let count = 0;
 
-  let lengthEyeses = [1,2,3];
+  let lengthEyeses = [];
+  let averagelengthEyeses = [];
   let chartCtx = document.getElementById('chart');
 
   // since images are being fed from a webcam, we want to feed in the
@@ -173,22 +175,15 @@ function detectPoseInRealTime(video, net) {
   canvas.width = videoWidth;
   canvas.height = videoHeight;
 
-  async function drawChart() {
-    console.log(lengthEyeses.length);
-    if (true) {
-
-    }else{
-
-    }
-    if (!myChart) {
-      var myChart = new Chart(chartCtx, {
+  function drawChart() {
+    if (!window.myChart) {
+      let config = {
         type: "line",
         data: {
-          labels: [...Array(lengthEyeses.length).keys()],
+          labels: [...Array(averagelengthEyeses.length).keys()],
           datasets: [{
             label: '目の距離(px)',
-            data: lengthEyeses,
-            label: "withA",
+            data: averagelengthEyeses,
             backgroundColor: [
               'rgba(255, 99, 132, 0.2)'
             ],
@@ -205,16 +200,15 @@ function detectPoseInRealTime(video, net) {
           scales: {
             xAxes: [{
               ticks: {
-                suggestedMin: 0,
-                suggestedMax: 120,
-                stepSize: 2
+                suggestedMin: 10,
+                stepSize: 5
               }
             }],
             yAxes: [{
               ticks: {
                 suggestedMin: 0,
-                suggestedMax: 200,
-                stepSize: 2
+                suggestedMax: 150,
+                stepSize: 10
               }
             }],
           },
@@ -222,14 +216,13 @@ function detectPoseInRealTime(video, net) {
             duration: 0
           }
         }
-      })
+      }
+      window.myChart = new Chart(chartCtx, config)
     }else{
-      myChart.data.datasets.data = lengthEyeses
-      myChart.data.labels = [...Array(lengthEyeses.length).keys()]
-      myChart.update();
-    }
-    if (lengthEyeses.length > 120){
-      lengthEyeses = lengthEyeses.slice(30)
+      // データ更新
+      window.myChart.data.datasets.data = averagelengthEyeses
+      window.myChart.data.labels = [...Array(averagelengthEyeses.length).keys()]
+      window.myChart.update();
     }
   };
 
@@ -237,7 +230,7 @@ function detectPoseInRealTime(video, net) {
     // Begin monitoring code for frames per second
     stats.begin();
 
-    let poses = [];
+    let poses = []; 
     let minPoseConfidence;
     let minPartConfidence;
     switch (guiState.algorithm) {
@@ -279,10 +272,24 @@ function detectPoseInRealTime(video, net) {
     // ここで目と目の距離を計算．
     let leftEyes = poses[0]['keypoints'][1]["position"];
     let rightEyes = poses[0]['keypoints'][2]["position"];
+    let score = poses[0]['keypoints'][1]['score'] * poses[0]['keypoints'][2]['score']
 
-    
-    let lengthEyes = ((leftEyes['x'] - rightEyes['x']) ** 2 + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5;
-    lengthEyeses.push(lengthEyes)
+    let lengthEyes = Math.round(((leftEyes['x'] - rightEyes['x']) ** 2 + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5);
+    if (count % 30 === 0) {
+      let sum = 0;
+      for(var i = 0; i < lengthEyeses.length; i++){
+        sum += lengthEyeses[i];
+      }
+      averagelengthEyeses.push(sum / lengthEyeses.length)
+      lengthEyeses = [];
+      drawChart();
+    }
+    count = count + 1;
+    // score が高い時のみ追加
+    if (score > 0.5){
+      lengthEyeses.push(lengthEyes);
+    }
+
 
     // For each pose (i.e. person) detected in an image, loop through the poses
     // and draw the resulting skeleton and keypoints if over certain confidence
@@ -294,10 +301,6 @@ function detectPoseInRealTime(video, net) {
         drawBoundingBox(keypoints, ctx);
       }
     });
-
-    if (lengthEyeses.length % 30 == 1) {
-      drawChart();
-    };
     // End monitoring code for frames per second
     stats.end();
 
