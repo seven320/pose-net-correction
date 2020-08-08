@@ -26,6 +26,8 @@ const videoWidth = 400;
 const videoHeight = 300;
 const stats = new Stats();
 
+const audio = new Audio('sounds/Doorbell-Melody01-1.mp3')
+
 /**
  * Loads a the camera to be used in the demo
  *
@@ -360,9 +362,11 @@ export async function bindPage() {
   setupGui([], net); // gui に必要な部分を全て統括
   setupFPS();
   detectPoseInRealTime(video, net);
+
 }
 
 navigator.getUserMedia = navigator.getUserMedia ||
     navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 // kick off the demo
+audio.play();
 bindPage();
