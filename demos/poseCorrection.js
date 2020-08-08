@@ -25,8 +25,7 @@ import { data } from '@tensorflow/tfjs';
 const videoWidth = 400;
 const videoHeight = 300;
 const stats = new Stats();
-
-const audio = new Audio('sounds/Doorbell-Melody01-1.mp3')
+const audio = new Audio('https://raw.githubusercontent.com/seven320/pose-net-correction/master/demos/sounds/Doorbell-Melody01-1.mp3')
 
 /**
  * Loads a the camera to be used in the demo
@@ -95,6 +94,7 @@ const guiState = {
   pose: {
     maxPose: 80,
   },
+  state: false,
   net: null,
 };
 
@@ -139,10 +139,6 @@ function setupGui(cameras, net) {
   output.add(guiState.output, 'showSkeleton');
   output.add(guiState.output, 'showPoints');
   output.add(guiState.output, 'showBoundingBox');
-
-  let pose = gui.addFolder('baseline');
-  pose.add(guiState.pose, 'maxPose', 0, 200);
-  pose.open();
 }
 
 /**
@@ -166,6 +162,7 @@ function detectPoseInRealTime(video, net) {
   let averagelengthEyeses = [];
   let averageTriangleAreas = [];
   let chartCtx = document.getElementById('chart');
+  let button = false;
 
   // since images are being fed from a webcam, we want to feed in the
   // original image and then just flip the keypoints' x coordinates. If instead
@@ -175,6 +172,18 @@ function detectPoseInRealTime(video, net) {
 
   canvas.width = videoWidth;
   canvas.height = videoHeight;
+
+// sets up buttons
+  function setupButton() {
+    document.getElementById('set').addEventListener('click', function(){
+      // set max pose
+      guiState.pose.maxPose = averagelengthEyeses[averagelengthEyeses.length - 1] + 10;
+    });
+
+    document.getElementById('start').addEventListener('click', function(){
+      guiState.state = true;
+    })
+  }
 
   function drawChart() {
     let datasets = [{
@@ -260,7 +269,6 @@ function detectPoseInRealTime(video, net) {
           scoreThreshold: guiState.multiPoseDetection.minPartConfidence,
           nmsRadius: guiState.multiPoseDetection.nmsRadius
         });
-        
 
         poses = poses.concat(all_poses);
         minPoseConfidence = +guiState.multiPoseDetection.minPoseConfidence;
@@ -300,7 +308,18 @@ function detectPoseInRealTime(video, net) {
       triangleAreas = []
 
       drawChart();
+
+      if (!button){
+        setupButton();
+        button = true;
+      }
+      if (guiState.state){
+        if (averagelengthEyeses[averagelengthEyeses.length - 1] > guiState.pose.maxPose){
+          audio.play();
+        }
+      }
     }
+
     // score が高い時のみ追加
     if (score > 0.5){
       lengthEyeses.push(lengthEyes);
@@ -345,7 +364,6 @@ export async function bindPage() {
     multiplier: guiState.input.multiplier,
     quantBytes: guiState.input.quantBytes
   });
-  toggleLoadingUI(false);
 
   let video;
 
@@ -358,15 +376,14 @@ export async function bindPage() {
     info.style.display = 'block';
     throw e;
   }
+  toggleLoadingUI(false);
 
   setupGui([], net); // gui に必要な部分を全て統括
   setupFPS();
   detectPoseInRealTime(video, net);
-
 }
 
 navigator.getUserMedia = navigator.getUserMedia ||
     navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 // kick off the demo
-audio.play();
 bindPage();
