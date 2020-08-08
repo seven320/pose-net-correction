@@ -415,7 +415,6 @@ function detectPoseInRealTime(video, net) {
           nmsRadius: guiState.multiPoseDetection.nmsRadius
         });
         
-
         poses = poses.concat(all_poses);
         minPoseConfidence = +guiState.multiPoseDetection.minPoseConfidence;
         minPartConfidence = +guiState.multiPoseDetection.minPartConfidence;

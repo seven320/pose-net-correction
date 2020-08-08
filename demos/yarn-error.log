@@ -1,8 +1,8 @@
 Arguments: 
-  /usr/local/Cellar/node/14.3.0/bin/node /usr/local/Cellar/yarn/1.17.3/libexec/bin/yarn.js add chrt.js
+  /usr/local/Cellar/node/14.3.0/bin/node /usr/local/Cellar/yarn/1.17.3/libexec/bin/yarn.js add Audio
 
 PATH: 
-  /var/folders/6p/z8vwwt3x1hs243g6xcp653r80000gn/T/yarn--1596783675198-0.6811966373062495:/Users/kenkato/html_css/pose-net-correction/demos/node_modules/.bin:/Users/kenkato/.config/yarn/link/node_modules/.bin:/usr/local/Cellar/node/14.3.0/libexec/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/Cellar/node/14.3.0/lib/node_modules/npm/bin/node-gyp-bin:/usr/local/Cellar/node/14.3.0/bin/node_modules/npm/bin/node-gyp-bin:/Library/Frameworks/Python.framework/Versions/3.6/bin:/usr/local/opt/openssl@1.1/bin:/Users/kenkato/go/bin:/Users/kenkato/.rbenv/shims:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/share/dotnet:/opt/X11/bin:~/.dotnet/tools:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Library/Frameworks/Python.framework/Versions/3.6/bin:/usr/local/opt/openssl@1.1/bin:/Users/kenkato/go/bin:/Users/kenkato/.rbenv/shims
+  /Library/Frameworks/Python.framework/Versions/3.6/bin:/usr/local/opt/openssl@1.1/bin:/Users/kenkato/go/bin:/Users/kenkato/.rbenv/shims:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/share/dotnet:/opt/X11/bin:~/.dotnet/tools:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Library/Frameworks/Python.framework/Versions/3.6/bin:/usr/local/opt/openssl@1.1/bin:/Users/kenkato/go/bin:/Users/kenkato/.rbenv/shims
 
 Yarn version: 
   1.17.3
@@ -14,7 +14,7 @@ Platform:
   darwin x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/chrt.js: Not found
+  Error: https://registry.yarnpkg.com/Audio: Not found
       at Request.params.callback [as _callback] (/usr/local/Cellar/yarn/1.17.3/libexec/lib/cli.js:66830:18)
       at Request.self.callback (/usr/local/Cellar/yarn/1.17.3/libexec/lib/cli.js:140464:22)
       at Request.emit (events.js:315:20)

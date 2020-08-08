@@ -22,9 +22,11 @@ import Chart from 'chart.js'
 import {drawBoundingBox, drawKeypoints, drawSkeleton, isMobile, toggleLoadingUI, tryResNetButtonName, tryResNetButtonText, updateTryResNetButtonDatGuiCss} from './demo_util';
 import { data } from '@tensorflow/tfjs';
 
-const videoWidth = 600;
-const videoHeight = 500;
+const videoWidth = 400;
+const videoHeight = 300;
 const stats = new Stats();
+
+const audio = new Audio('sounds/Doorbell-Melody01-1.mp3')
 
 /**
  * Loads a the camera to be used in the demo
@@ -91,7 +93,7 @@ const guiState = {
     showBoundingBox: true,
   },
   pose: {
-    poseValue: 1.0,
+    maxPose: 80,
   },
   net: null,
 };
@@ -116,8 +118,6 @@ function setupGui(cameras, net) {
   // gui.add(guiState, tryResNetButtonName).name(tryResNetButtonText);
   // updateTryResNetButtonDatGuiCss();
 
-
-
   // The input parameters have the most effect on accuracy and speed of the
   // network
   // let input = gui.addFolder('Input');
@@ -136,10 +136,12 @@ function setupGui(cameras, net) {
 
   let output = gui.addFolder('Output');
   output.add(guiState.output, 'showVideo');
-  output.open();
+  output.add(guiState.output, 'showSkeleton');
+  output.add(guiState.output, 'showPoints');
+  output.add(guiState.output, 'showBoundingBox');
 
-  let pose = gui.addFolder('pose');
-  pose.add(guiState.pose, 'poseValue', 0.0, 1.0);
+  let pose = gui.addFolder('baseline');
+  pose.add(guiState.pose, 'maxPose', 0, 200);
   pose.open();
 }
 
@@ -151,8 +153,6 @@ function setupFPS() {
   document.getElementById('main').appendChild(stats.dom);
 }
 
-
-
 /**
  * Feeds an image to posenet to estimate poses - this is where the magic
  * happens. This function loops with a requestAnimationFrame method.
@@ -160,10 +160,11 @@ function setupFPS() {
 function detectPoseInRealTime(video, net) {
   const canvas = document.getElementById('output');
   const ctx = canvas.getContext('2d');
-  let count = 0;
 
   let lengthEyeses = [];
+  let triangleAreas = [];
   let averagelengthEyeses = [];
+  let averageTriangleAreas = [];
   let chartCtx = document.getElementById('chart');
 
   // since images are being fed from a webcam, we want to feed in the
@@ -176,21 +177,28 @@ function detectPoseInRealTime(video, net) {
   canvas.height = videoHeight;
 
   function drawChart() {
+    let datasets = [{
+        label: '目の距離(px)',
+        data: averagelengthEyeses,
+        backgroundColor: ['rgba(255, 99, 132, 0.2)'],
+        borderColor: ['rgba(255,99,132,1)']
+      },
+      {
+        label: 'maxPose',
+        data: Array(averagelengthEyeses.length).fill(guiState.pose.maxPose),
+      }
+      // ,
+      // {
+      //   label: '面積',
+      //   data: averageTriangleAreas
+      // }
+    ]
     if (!window.myChart) {
       let config = {
         type: "line",
         data: {
           labels: [...Array(averagelengthEyeses.length).keys()],
-          datasets: [{
-            label: '目の距離(px)',
-            data: averagelengthEyeses,
-            backgroundColor: [
-              'rgba(255, 99, 132, 0.2)'
-            ],
-            borderColor: [
-              'rgba(255,99,132,1)'
-            ]
-          }]
+          datasets: datasets
         },
         // グラフ自体の共通項目設置絵
         options: {
@@ -220,7 +228,8 @@ function detectPoseInRealTime(video, net) {
       window.myChart = new Chart(chartCtx, config)
     }else{
       // データ更新
-      window.myChart.data.datasets.data = averagelengthEyeses
+
+      window.myChart.data.datasets = datasets
       window.myChart.data.labels = [...Array(averagelengthEyeses.length).keys()]
       window.myChart.update();
     }
@@ -273,32 +282,45 @@ function detectPoseInRealTime(video, net) {
     let leftEyes = poses[0]['keypoints'][1]["position"];
     let rightEyes = poses[0]['keypoints'][2]["position"];
     let score = poses[0]['keypoints'][1]['score'] * poses[0]['keypoints'][2]['score']
+    let nose = poses[0]['keypoints'][0]['position']
 
-    let lengthEyes = Math.round(((leftEyes['x'] - rightEyes['x']) ** 2 + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5);
-    if (count % 30 === 0) {
+    let triangleArea = Math.abs(0.5 * ((leftEyes['x'] - nose['x']) * (rightEyes['y'] - nose['y']) - (rightEyes['x'] - nose['x']) -(leftEyes['y'] - nose['y'])));
+    let lengthEyes = ((leftEyes['x'] - rightEyes['x']) ** 2 + (leftEyes['y'] - rightEyes['y']) ** 2) ** 0.5;
+
+    if (lengthEyeses.length % 30 == 29) {
       let sum = 0;
+      let areasum = 0;
       for(var i = 0; i < lengthEyeses.length; i++){
         sum += lengthEyeses[i];
+        areasum += triangleAreas[i];
       }
-      averagelengthEyeses.push(sum / lengthEyeses.length)
-      lengthEyeses = [];
+      averagelengthEyeses.push(Math.round(sum / lengthEyeses.length))
+      averageTriangleAreas.push(Math.round(areasum / triangleAreas.length))
+      lengthEyeses = []
+      triangleAreas = []
+
       drawChart();
     }
-    count = count + 1;
     // score が高い時のみ追加
     if (score > 0.5){
       lengthEyeses.push(lengthEyes);
+      triangleAreas.push(triangleArea);
     }
-
 
     // For each pose (i.e. person) detected in an image, loop through the poses
     // and draw the resulting skeleton and keypoints if over certain confidence
     // scores
     poses.forEach(({score, keypoints}) => {
       if (score >= minPoseConfidence) {
-        drawKeypoints(keypoints, minPartConfidence, ctx);
-        drawSkeleton(keypoints, minPartConfidence, ctx);
-        drawBoundingBox(keypoints, ctx);
+        if (guiState.output.showPoints){
+          drawKeypoints(keypoints, minPartConfidence, ctx);
+        }
+        if (guiState.output.showSkeleton){
+          drawSkeleton(keypoints, minPartConfidence, ctx);
+        }
+        if (guiState.output.showBoundingBox){
+          drawBoundingBox(keypoints, ctx);
+        }
       }
     });
     // End monitoring code for frames per second
@@ -340,9 +362,11 @@ export async function bindPage() {
   setupGui([], net); // gui に必要な部分を全て統括
   setupFPS();
   detectPoseInRealTime(video, net);
+
 }
 
 navigator.getUserMedia = navigator.getUserMedia ||
     navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
 // kick off the demo
+audio.play();
 bindPage();
