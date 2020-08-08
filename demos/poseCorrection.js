@@ -175,12 +175,8 @@ function detectPoseInRealTime(video, net) {
 
 // sets up buttons
   function setupButton() {
-    document.getElementById('set').addEventListener('click', function(){
-      // set max pose
-      guiState.pose.maxPose = averagelengthEyeses[averagelengthEyeses.length - 1] + 10;
-    });
-
     document.getElementById('start').addEventListener('click', function(){
+      guiState.pose.maxPose = averagelengthEyeses[averagelengthEyeses.length - 1] + 5;
       guiState.state = true;
     })
   }
@@ -307,13 +303,13 @@ function detectPoseInRealTime(video, net) {
       lengthEyeses = []
       triangleAreas = []
 
-      drawChart();
 
       if (!button){
         setupButton();
         button = true;
       }
       if (guiState.state){
+        drawChart();
         if (averagelengthEyeses[averagelengthEyeses.length - 1] > guiState.pose.maxPose){
           audio.play();
         }
