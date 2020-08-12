@@ -70,7 +70,7 @@ const defaultQuantBytes = 4;
 
 const defaultMobileNetMultiplier = isMobile() ? 0.50 : 0.75;
 const defaultMobileNetStride = 16;
-const defaultMobileNetInputResolution = 250;
+const defaultMobileNetInputResolution = 200;
 
 const guiState = {
   algorithm: 'single-pose',
@@ -108,7 +108,7 @@ function setupGui(cameras, net) {
     guiState.camera = cameras[0].deviceId;
   }
 
-  const gui = new dat.GUI({width: 300});
+  const gui = new dat.GUI({width: 200});
 
   let architectureController = null;
   guiState[tryResNetButtonName] = function() {
@@ -293,7 +293,7 @@ function detectPoseInRealTime(video, net) {
 
     if (lengthEyeses.length % 30 == 29) {
       let sum = 0;
-      let areasum = 0;
+      let areasum = 0; 
       for(var i = 0; i < lengthEyeses.length; i++){
         sum += lengthEyeses[i];
         areasum += triangleAreas[i];
@@ -302,6 +302,10 @@ function detectPoseInRealTime(video, net) {
       averageTriangleAreas.push(Math.round(areasum / triangleAreas.length))
       lengthEyeses = []
       triangleAreas = []
+
+      if(averagelengthEyeses.length > 50) {
+        averagelengthEyeses = [];
+      }
 
 
       if (!button){
