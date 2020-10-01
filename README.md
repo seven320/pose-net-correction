@@ -9,6 +9,11 @@
 # package 
 
 # how to use 
+access this page[https://pose-net-correction.netlify.app/posecorrection]
+
+姿勢を正した状態でstartを押すと開始．
+
+
 
 ## Setup
 
